@@ -45,7 +45,7 @@ jobs:
           node-version: 16
           registry-url: https://registry.npmjs.org/
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json'} }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
       - run: npm ci
       - run: npm install
       - run: npm run build
