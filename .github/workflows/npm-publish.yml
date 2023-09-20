@@ -21,6 +21,13 @@ jobs:
         with:
           node-version: 16
       - run: npm ci
+      
+      # github action의 IP가 수시로 바뀌므로
+      # 그 ip를 ec2의 인바운드 규칙에서 허용해야 하므로
+      # github action의 IP를 얻어온다.
+      - name: Get Github Actions IP
+        id: ip
+        uses: haythem/public-ip@v1.2
 
   publish-npm:
     needs: build
@@ -34,3 +41,64 @@ jobs:
       - run: npm ci
       - run: npm install
       - run: npm run build
+
+      # 도커 이미지를 만들기 전에 이미지에 대한 정보를 설정하기
+      - name: Docker meta
+        id: docker_meta
+        uses: crazy-max/ghaction-docker-meta@v1
+        with:
+          images: wonjun-githubaction-front-image # 이미지 이름 지정
+
+      # 도커 이미지를 생성할 의존성 준비하기
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      # 생성한 이미지를 도커허브에 올리기 전에 도커허브에 로그인하기
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:  
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      # 도커허브에 생성한 이미지를 푸시하기
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          script_stop: true
+          push: true
+          tags: jangwonjun/spofo-front:latest
+
+      # ec2 IAM 계정의 access key, secret key의 계정정보 등록
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      # 보안 그룹 ID를 입력하여 github action이 EC2에 접근할 수 있도록 설정
+      - name: Add Github Actions IP to Security group
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
+
+      - name: SSH Commands
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.AWS_SSH_HOST }}
+          username: ${{ secrets.AWS_SSH_USERNAME }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          port: ${{ secrets.AWS_SSH_PORT }}
+          # 스크립트 중간에 실패하면 다음 스크립트를 실행하지 않는 옵션 true로 주기
+          script_stop: true
+          script: |
+            sudo docker pull jangwonjun/spofo-front:latest
+            sudo docker rm -f spofo-front-app
+            sudo docker run -p 80:80 -itd --name spofo-front-app jangwonjun/spofo-front:latest
+            
+      # 등록했던 인바운드 규칙을 삭제하기
+      - name: Remove Github Actions IP From Security Group
+        run: |
+          aws ec2 revoke-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
