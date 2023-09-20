@@ -36,24 +36,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # github action의 가상환경에 내 프로젝트를 체크아웃하기
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       # node 설치하기
       - name: Set up Node
-      - uses: actions/setup-node@v3
-      - uses: actions/cache@v3
+        uses: actions/setup-node@v3
+
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v3
         with:
           node-version: 16
           #registry-url: https://registry.npmjs.org/
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-      - run: npm ci
+      
+      - name: Install Dependencies
+        # 이전의 cache가 없다면 의존성을 설치
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Execute npm install
+        #uses: actions/setup-node@v3
+        run: npm install
 
       - name: Execute npm build
-      - uses: actions/setup-node@v3
-      - run: npm install
-      - run: npm run build
-      
+        run: npm run build  
+        
       # job은 별도의 가상환경에서 실행되므로
       # job 사이에 파일 공유를 위해 빌드 결과물인 jar 파일을 upload함
       - name: Upload dist folder
