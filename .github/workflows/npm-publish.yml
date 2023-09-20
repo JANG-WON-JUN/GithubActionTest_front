@@ -116,7 +116,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: push_to_registry
-    steps:      # github action의 IP가 수시로 바뀌므로
+    steps:      
+      # github action의 IP가 수시로 바뀌므로
       # 그 ip를 ec2의 인바운드 규칙에서 허용해야 하므로
       # github action의 IP를 얻어온다.
       - name: Get Github Actions IP
@@ -125,7 +126,7 @@ jobs:
         
       # ec2 IAM 계정의 access key, secret key의 계정정보 등록
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
