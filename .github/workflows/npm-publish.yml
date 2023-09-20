@@ -50,6 +50,7 @@ jobs:
       - run: npm ci
 
       - name: Execute npm build
+      - uses: actions/setup-node@v3
       - run: npm install
       - run: npm run build
       
