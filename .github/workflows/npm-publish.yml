@@ -94,6 +94,25 @@ jobs:
           # 스크립트 중간에 실패하면 다음 스크립트를 실행하지 않는 옵션 true로 주기
           script_stop: true
           script: |
+            sudo rm -f default.conf
+            sudo touch default.conf
+            sudo echo "server {" >> default.conf
+            sudo echo "    listen       80;" >> default.conf
+            sudo echo "    listen  [::]:80;" >> default.conf
+            sudo echo "    server_name  localhost;" >> default.conf
+            sudo echo "" >> default.conf
+            sudo echo "" >> default.conf
+            sudo echo "    location / {" >> default.conf
+            sudo echo "        root   /usr/share/nginx/html/dist;" >> default.conf
+            sudo echo "        index  index.html index.htm;" >> default.conf
+            sudo echo "    }" >> default.conf
+            sudo echo "" >> default.conf
+            sudo echo "    error_page   500 502 503 504  /50x.html;" >> default.conf
+            sudo echo "    location = /50x.html {" >> default.conf
+            sudo echo "        root   /usr/share/nginx/html;" >> default.conf
+            sudo echo "    }" >> default.conf
+            sudo echo "}" >> default.conf
+            
             sudo docker pull jangwonjun/spofo-front:latest
             sudo docker rm -f spofo-front-app
             sudo docker run -p 80:80 -itd --name spofo-front-app jangwonjun/spofo-front:latest
